@@ -48,7 +48,7 @@ class Valloc {
             block_size = size;
             block_size_power = ARCH_SIZE - __builtin_clzll(size) - 1;
             //1024 = 256*4
-            //262144 = 65536 = 256*256
+            //262144 = 65536*4 = 256*256
 
             L1 = (uint64_t*) mmap(NULL, 1024 * sizeof(uint64_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             L0 = (uint64_t*) mmap(NULL, 262144 * sizeof(uint64_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
