@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <sys/mman.h>
 #include <cstddef>
-#include <exception>
+#include <new>
 #include <algorithm>
 #include <cerrno>
 #include <iostream>
@@ -79,6 +79,11 @@ class Valloc {
                 
         }
 
+        Valloc(const Valloc&) = delete;
+        Valloc& operator=(const Valloc&) = delete; 
+        //no copy constructors
+        //no nakal, no akal needed to solve double free :)
+
         void* allocate() {
             int l2_bit = find_first_free_bit(L2);
             if (l2_bit == -1){
@@ -123,6 +128,7 @@ class Valloc {
             }
 
             uint8_t* p = static_cast<uint8_t*>(ptr);
+            size_t max_pool_size = (POOL_CAPACITY << block_size_power);
 
             if (p < memory_pool || p >= memory_pool_end) {
                 return EFAULT; 
@@ -180,6 +186,7 @@ class VallocRouter{
         struct PoolBounds {
             uint8_t* start;
             uint8_t* end;
+            int pool_index;
         };
         
         PoolBounds bounds[9];
@@ -191,7 +198,11 @@ class VallocRouter{
             for (int i = 0; i < 9; ++i) {
                 bounds[i].start = pools[i].get_pool_start();
                 bounds[i].end = pools[i].get_pool_end();
+                bounds[i].pool_index = i;
             }
+
+            std::sort(bounds, bounds + 9, 
+            [](const PoolBounds& a, const PoolBounds& b){return a.start < b.start;});
         }
 
         ~VallocRouter() = default; 
@@ -211,15 +222,24 @@ class VallocRouter{
             if (ptr == nullptr){
                 return 0;
             }
-            uint8_t* p = static_cast<uint8_t*>(ptr);
+            
+            uint8_t* p = reinterpret_cast<uint8_t*>(ptr);
 
-            #pragma GCC unroll 9
-            for (int i = 0; i < 9; ++i) {
-                if (p >= bounds[i].start && p < bounds[i].end) {
-                    return pools[i].free(ptr);
-                }
+            int i = (p >= bounds[0].start)
+                + (p >= bounds[1].start)
+                + (p >= bounds[2].start)
+                + (p >= bounds[3].start)
+                + (p >= bounds[4].start)
+                + (p >= bounds[5].start)
+                + (p >= bounds[6].start)
+                + (p >= bounds[7].start)
+                + (p >= bounds[8].start)
+                - 1;
+
+            if ((unsigned)i < 9 && p < bounds[i].end){
+                return pools[bounds[i].pool_index].free(ptr);
             }
-
+                
             return EFAULT;
         }
 };
