@@ -21,8 +21,9 @@ inline int find_first_free_bit(const uint64_t* chunk){
         int idx;
         #pragma GCC unroll 4
         for (int i = 0; i < 4; i++){
-            if (~chunk[i]){
-                idx = __builtin_ctzll(~chunk[i]);
+            const uint64_t inverted = ~chunk[i];
+            if (inverted){
+                idx = __builtin_ctzll(inverted);
                 return i*64 + idx;
             }
         }
@@ -103,10 +104,12 @@ class Valloc {
                     uint64_t l1_index = global_block_index >> 8;
                     L1[l1_index >> 6] = L1[l1_index >> 6] | (1ULL << (l1_index & 63));
 
-                    reg = _mm256_load_si256(reinterpret_cast<const __m256i*>(&L1[l2_bit << 2]));
+                    if (__builtin_expect(L1[l1_index >> 6] == ~0ULL, 0)){
+                        reg = _mm256_load_si256(reinterpret_cast<const __m256i*>(&L1[l2_bit << 2]));
 
-                    if (_mm256_testc_si256(reg, all_ones)){
-                        L2[l2_bit >> 6] = L2[l2_bit >> 6] | (1ULL << (l2_bit & 63));
+                        if (_mm256_testc_si256(reg, all_ones)){
+                            L2[l2_bit >> 6] = L2[l2_bit >> 6] | (1ULL << (l2_bit & 63));
+                        }
                     }
                 }
             }
@@ -122,7 +125,7 @@ class Valloc {
             uint8_t* p = static_cast<uint8_t*>(ptr);
             size_t max_pool_size = (POOL_CAPACITY << block_size_power);
 
-            if (p < memory_pool || p >= memory_pool + max_pool_size) {
+            if (p < memory_pool || p >= memory_pool_end) {
                 return EFAULT; 
             }
 
