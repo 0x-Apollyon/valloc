@@ -60,6 +60,19 @@ class Valloc {
             if (L1 == MAP_FAILED || L0 == MAP_FAILED || memory_pool == MAP_FAILED){
                 std::cerr << "mmap failed for block_size: " << block_size << "\n";
                 std::cerr << "errno: " << errno << " (" << strerror(errno) << ")\n";
+
+                if (L1 != MAP_FAILED){
+                    munmap(L1, 1024 * sizeof(uint64_t));
+                }
+
+                if (L0 != MAP_FAILED){
+                    munmap(L0, 262144 * sizeof(uint64_t));
+                }
+
+                if (memory_pool != MAP_FAILED){
+                    munmap(memory_pool, pool_size);
+                }
+                
                 throw std::bad_alloc{};
             }
                 
