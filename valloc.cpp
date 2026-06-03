@@ -123,7 +123,6 @@ class Valloc {
             }
 
             uint8_t* p = static_cast<uint8_t*>(ptr);
-            size_t max_pool_size = (POOL_CAPACITY << block_size_power);
 
             if (p < memory_pool || p >= memory_pool_end) {
                 return EFAULT; 
