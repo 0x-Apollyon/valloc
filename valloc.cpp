@@ -18,16 +18,12 @@ inline int find_first_free_bit(const uint64_t* chunk){
     if (_mm256_testc_si256(reg, all_ones)){
         return -1;
     } else {
-        int idx;
-        #pragma GCC unroll 4
-        for (int i = 0; i < 4; i++){
-            const uint64_t inverted = ~chunk[i];
-            if (inverted){
-                idx = __builtin_ctzll(inverted);
-                return i*64 + idx;
-            }
-        }
-        return -1;
+        __m256i cmp = _mm256_cmpeq_epi64(reg, all_ones);
+        int mask = _mm256_movemask_pd(_mm256_castsi256_pd(cmp));
+        int free_lanes = (~mask) & 0xF;
+        int lane_idx = __builtin_ctz(free_lanes);
+        int bit_idx = __builtin_ctzll(~chunk[lane_idx]);
+        return (lane_idx * 64) + bit_idx;
     }
 }
 
@@ -48,7 +44,7 @@ class Valloc {
             block_size = size;
             block_size_power = ARCH_SIZE - __builtin_clzll(size) - 1;
             //1024 = 256*4
-            //262144 = 65536*4 = 256*256
+            //262144 = 65536 = 256*256
 
             L1 = (uint64_t*) mmap(NULL, 1024 * sizeof(uint64_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             L0 = (uint64_t*) mmap(NULL, 262144 * sizeof(uint64_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
