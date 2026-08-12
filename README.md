@@ -22,7 +22,7 @@ If you wanted a more detailed answer:
 
 General purpose allocators like malloc scan memory sequentially to fit variable sized requests. Malloc does this by maintaining a linked list of free memory blocks which it can allocate, however that is really bad for speed.
 
-Linked lists destroy locality, introduce pointer chasing and other cause other complicated I dont fully understand yet. The way malloc functions also introduces branches (which further cause pipeline stalls) and cache misses (a result of the destroyed locality).
+Linked lists destroy locality, introduce pointer chasing and other cause other complicated issues I dont fully understand yet. The way malloc functions also introduces branches (which further cause pipeline stalls) and cache misses (a result of the destroyed locality).
 
 Valloc avoids sequential scanning entirely (aswell as using no linked lists, linked lists in performance sensitive contexts is a recipe for disaster). The CPU loads 256 memory states into an AVX2 register and tests the entire block for empty space in one clock cycle using _mm256_testc_si256. 
 
